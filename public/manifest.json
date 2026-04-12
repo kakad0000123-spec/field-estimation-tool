@@ -1,0 +1,9 @@
+{
+  "name": "現地評估小工具",
+  "short_name": "現地估價",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#f9fafb",
+  "theme_color": "#1e40af",
+  "icons": []
+}
