@@ -1,4 +1,4 @@
-import { ComponentType, ComponentData, ColumnData, BeamData, SlabData, WallData, FloorData, FoundationData, EquipFoundData, StairData, OpeningData, ManualRCData, CustomData } from '../data/types';
+import { ComponentType, ComponentData, ColumnData, BeamData, SlabData, WallData, FloorData, FoundationData, EquipFoundData, StairData, OpeningData, ManualRCData, CustomData, SteelMemberData, SteelPlateData } from '../data/types';
 
 const TYPE_LABEL_MAP: Record<ComponentType, string> = {
   column: '柱',
@@ -12,6 +12,8 @@ const TYPE_LABEL_MAP: Record<ComponentType, string> = {
   opening: '開口扣除',
   manualRC: '手填',
   custom: '自訂',
+  steelMember: '鋼構件',
+  steelPlate: '鋼板',
 };
 
 function generateAutoLabel(type: ComponentType, existingComponents: ComponentData[]): string {
@@ -52,5 +54,9 @@ export function createDefaultComponent(caseId: number, type: ComponentType, exis
       return { ...base, type: 'manualRC', concrete280: 0, concrete210: 0, rebarSD280: 0, rebarSD420: 0, formwork: 0, trowel: 0, wireMesh: 0, pcCushion: 0, excavation: 0, backfill: 0 } as ManualRCData;
     case 'custom':
       return { ...base, type: 'custom', unit: '\u5F0F', customQuantity: 1, unitPrice: 0, description: '' } as CustomData;
+    case 'steelMember':
+      return { ...base, type: 'steelMember', sectionType: 'H', section: 'H294\u00D7200', grade: 'SN490B', length: 0, quantity: 1, coating: '\u6CB9\u6F06', coatingLength: 0, deductTopArea: false } as SteelMemberData;
+    case 'steelPlate':
+      return { ...base, type: 'steelPlate', plateType: 'PL', plate: 'PL6', grade: 'SN400B', length: 0, width: 0, quantity: 1, coating: '\u6CB9\u6F06' } as SteelPlateData;
   }
 }

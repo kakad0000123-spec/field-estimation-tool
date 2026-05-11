@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { StairData } from '../../data/types';
 import { calcStair } from '../../calc/stair';
 import { getRebarSpec } from '../../data/rebarSpecs';
-import { NumberField, RebarSelect, ResultRow, RebarDetailSection, RebarLine } from '../FormFields';
+import { NumberField, RebarSelect, ResultRow, RebarDetailSection, RebarLine, SectionHeader } from '../FormFields';
 import { fmt2, fmt1 } from '../format';
 
 interface Props {
@@ -28,7 +28,7 @@ export default function StairForm({ comp, onUpdate, barLengthM }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">尺寸 (cm)</div>
+      <SectionHeader icon="📐" title="尺寸 (cm)" />
       <NumberField label="梯寬" value={comp.stairWidth} onChange={(v) => onUpdate({ stairWidth: v })} unit="cm" placeholder="例: 120" />
       <NumberField label="階數" value={comp.steps} onChange={(v) => onUpdate({ steps: v })} step="1" placeholder="例: 12" />
       <NumberField label="級高" value={comp.riser} onChange={(v) => onUpdate({ riser: v })} unit="cm" placeholder="例: 17" />
@@ -36,12 +36,12 @@ export default function StairForm({ comp, onUpdate, barLengthM }: Props) {
       <NumberField label="板厚" value={comp.slabThick} onChange={(v) => onUpdate({ slabThick: v })} unit="cm" placeholder="例: 15" />
       <NumberField label="數量" value={comp.quantity} onChange={(v) => onUpdate({ quantity: v })} step="1" placeholder="例: 1" />
 
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3">配筋</div>
+      <SectionHeader icon="🔩" title="配筋" className="mt-3" />
       <RebarSelect label="主筋" value={comp.mainBar} onChange={(v) => onUpdate({ mainBar: v })} />
       <NumberField label="主筋間距" value={comp.barSpacing} onChange={(v) => onUpdate({ barSpacing: v })} unit="cm" placeholder="例: 15" />
 
       <div className="bg-gray-50 rounded-lg p-3 mt-3">
-        <div className="text-xs font-semibold text-gray-500 mb-2">計算結果</div>
+        <SectionHeader icon="📊" title="計算結果" variant="inside" />
         <ResultRow label="斜長" value={`${fmt2(result.diagonalLength)} m`} />
         <ResultRow label="混凝土 fc'=280" value={`${fmt2(result.concrete)} m³`} highlight />
         <RebarDetailSection lines={rebarLines} sd280Total={result.totalRebarSD280} sd420Total={result.totalRebarSD420} />

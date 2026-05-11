@@ -17,6 +17,34 @@ export interface WireMeshSpec {
   kgPerM2: number;
 }
 
+// ─── Steel Section (linear: H, I, C, P, L, BOX) ───
+export interface SteelSection {
+  label: string;       // e.g. 'H294×200'
+  type: 'H' | 'I' | 'C' | 'P' | 'L' | 'BOX';
+  weight: number;      // kg/m
+  surfaceArea: number; // m²/m (for painting)
+}
+
+// ─── Steel Plate (PL, CP, GR, DK — by area) ───
+export interface SteelPlate {
+  label: string;       // e.g. 'PL6'
+  type: 'PL' | 'CP' | 'GR' | 'DK';
+  weight: number;      // kg/m²
+}
+
+// ─── Steel Grade ───
+export interface SteelGrade {
+  label: string;       // e.g. 'SN490B'
+  fy: number;          // 降伏強度 MPa
+  fu: number;          // 抗拉強度 MPa
+}
+
+// ─── Coating Type ───
+export interface CoatingType {
+  label: string;       // e.g. '防火漆2hr'
+  unitPrice?: number;  // NTD/m²
+}
+
 // ─── Default Prices (NTD) ───
 export interface PriceTable {
   concrete210: number;
@@ -69,7 +97,9 @@ export type ComponentType =
   | 'stair'
   | 'opening'
   | 'manualRC'
-  | 'custom';
+  | 'custom'
+  | 'steelMember'
+  | 'steelPlate';
 
 export interface BaseComponent {
   id?: number;
@@ -230,6 +260,31 @@ export interface CustomData extends BaseComponent {
   description: string;
 }
 
+// ─── Steel Member (linear: H/I/C/P/L/BOX) ───
+export interface SteelMemberData extends BaseComponent {
+  type: 'steelMember';
+  sectionType: 'H' | 'I' | 'C' | 'P' | 'L' | 'BOX';
+  section: string;        // e.g. 'H294×200'
+  grade: string;          // e.g. 'SN490B'
+  length: number;         // mm
+  quantity: number;
+  coating: string;        // e.g. '油漆' / '防火漆2hr' / '無'
+  coatingLength: number;  // mm, 0 = full length
+  deductTopArea: boolean; // 扣梁上面積 (for beam top to deduct slab interface)
+}
+
+// ─── Steel Plate (PL/CP/GR/DK by area) ───
+export interface SteelPlateData extends BaseComponent {
+  type: 'steelPlate';
+  plateType: 'PL' | 'CP' | 'GR' | 'DK';
+  plate: string;          // e.g. 'PL6'
+  grade: string;          // e.g. 'SN400B'
+  length: number;         // mm
+  width: number;          // mm
+  quantity: number;
+  coating: string;
+}
+
 export type ComponentData =
   | ColumnData
   | BeamData
@@ -241,7 +296,9 @@ export type ComponentData =
   | StairData
   | OpeningData
   | ManualRCData
-  | CustomData;
+  | CustomData
+  | SteelMemberData
+  | SteelPlateData;
 
 // ─── Calculation Result ───
 export interface CalcResult {
