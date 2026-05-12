@@ -1,9 +1,9 @@
 {
-  "name": "現地評估小工具",
-  "short_name": "現地估價",
+  "name": "土木技師工具箱",
+  "short_name": "技師工具箱",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#f9fafb",
-  "theme_color": "#1e40af",
+  "background_color": "#f8f9fa",
+  "theme_color": "#2563eb",
   "icons": []
 }
