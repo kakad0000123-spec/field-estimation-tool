@@ -74,8 +74,8 @@ export default function SystemMenu({ onNavigate }: Props) {
             <span className="text-xl">&#9634;</span>
           </div>
           <div className="flex-1">
-            <h1 className="text-base font-bold text-[#1a1a2e] tracking-tight leading-tight">土木技師工具箱</h1>
-            <p className="text-xs text-[#9ca3af] leading-tight">Civil Engineer Toolbox</p>
+            <h1 className="text-base font-bold text-[#1a1a2e] tracking-tight leading-tight">現地評估工具箱</h1>
+            <p className="text-xs text-[#9ca3af] leading-tight">Field Estimation Toolbox</p>
           </div>
           <button
             onClick={() => window.open('https://docs.google.com/forms/d/1fQJroH7mztkhQbomjjZDNlbLTvPCOpOSINQmszOUwq8/viewform', '_blank')}
