@@ -1,4 +1,4 @@
-import { ComponentData, CalcResult, ManualRCData, CustomData, PriceTable, WasteRates, SummaryLine } from '../data/types';
+import { ComponentData, CalcResult, ManualRCData, CustomData, SteelMemberData, SteelPlateData, PriceTable, WasteRates, SummaryLine } from '../data/types';
 import { columnToCalcResult } from './column';
 import { beamToCalcResult } from './beam';
 import { slabToCalcResult } from './slab';
@@ -8,6 +8,7 @@ import { foundationToCalcResult } from './foundation';
 import { equipFoundToCalcResult } from './equipFound';
 import { stairToCalcResult } from './stair';
 import { openingToCalcResult } from './opening';
+import { calcSteelMember, calcSteelPlate } from './steelMember';
 
 export function calcComponentResult(comp: ComponentData, barLengthM?: number): CalcResult | null {
   switch (comp.type) {
@@ -22,6 +23,8 @@ export function calcComponentResult(comp: ComponentData, barLengthM?: number): C
     case 'opening': return openingToCalcResult(comp, barLengthM);
     case 'manualRC': return null; // handled separately
     case 'custom': return null;   // handled separately
+    case 'steelMember': return null; // steel: aggregated separately
+    case 'steelPlate': return null;
   }
 }
 
@@ -48,6 +51,7 @@ export function aggregateResults(components: ComponentData[], barLengthM?: numbe
       continue;
     }
     if (comp.type === 'custom') continue;
+    if (comp.type === 'steelMember' || comp.type === 'steelPlate') continue;
 
     const r = calcComponentResult(comp, barLengthM);
     if (r) {
@@ -117,6 +121,34 @@ export function buildSummaryLines(
   }
   if (result.backfill > 0) {
     lines.push({ item: '\u56DE\u586B', unit: 'm³', quantity: result.backfill, unitPrice: prices.backfill, amount: result.backfill * prices.backfill });
+  }
+
+  // Steel aggregation (group by section, then sum weight + paint area)
+  let steelWeight = 0;
+  let steelPaintArea = 0;
+  let platePaintArea = 0;
+  for (const comp of components) {
+    if (comp.type === 'steelMember') {
+      const d = calcSteelMember(comp as SteelMemberData);
+      steelWeight += d.totalWeight;
+      steelPaintArea += d.paintArea;
+    } else if (comp.type === 'steelPlate') {
+      const d = calcSteelPlate(comp as SteelPlateData);
+      steelWeight += d.totalWeight;
+      platePaintArea += d.paintArea;
+    }
+  }
+  if (steelWeight > 0) {
+    const tons = steelWeight / 1000;
+    // Use a default steel price (NTD/ton) \u2014 could be made configurable later
+    const steelUnitPrice = 32000;
+    lines.push({ item: '\u92FC\u69CB\u4EF6', unit: '\u5678', quantity: tons, unitPrice: steelUnitPrice, amount: tons * steelUnitPrice });
+  }
+  const totalPaint = steelPaintArea + platePaintArea;
+  if (totalPaint > 0) {
+    // Default paint price NTD/m\u00B2 (avg)
+    const paintUnitPrice = 300;
+    lines.push({ item: '\u92FC\u69CB\u5857\u88DD', unit: 'm\u00B2', quantity: totalPaint, unitPrice: paintUnitPrice, amount: totalPaint * paintUnitPrice });
   }
 
   // Custom items

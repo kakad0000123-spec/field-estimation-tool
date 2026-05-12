@@ -11,6 +11,7 @@ import { calcFoundation } from '../calc/foundation';
 import { calcEquipFound } from '../calc/equipFound';
 import { calcStair } from '../calc/stair';
 import { calcOpening } from '../calc/opening';
+import { calcSteelMember, calcSteelPlate } from '../calc/steelMember';
 import ComponentForm from './ComponentForm';
 import CalcDetailView from './CalcDetailView';
 import { fmt2, fmt1 } from './format';
@@ -54,6 +55,14 @@ function getCompactSummary(comp: ComponentData): string {
       return '\u624B\u52D5\u8F38\u5165\u6578\u91CF';
     case 'custom':
       return `${comp.customQuantity} ${comp.unit} x $${comp.unitPrice}`;
+    case 'steelMember': {
+      const d = calcSteelMember(comp);
+      return `${comp.section} \u00D7${comp.quantity}, L=${comp.length}mm, ${fmt1(d.totalWeight)} kg`;
+    }
+    case 'steelPlate': {
+      const d = calcSteelPlate(comp);
+      return `${comp.plate} ${comp.length}\u00D7${comp.width}mm \u00D7${comp.quantity}, ${fmt1(d.totalWeight)} kg`;
+    }
   }
 }
 

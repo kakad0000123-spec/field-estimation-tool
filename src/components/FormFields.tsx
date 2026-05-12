@@ -143,6 +143,68 @@ export function ResultRow({ label, value, highlight }: ResultRowProps) {
   );
 }
 
+// ─── Section Header with Emoji Icon ───
+interface SectionHeaderProps {
+  icon: string;
+  title: string;
+  variant?: 'outside' | 'inside';  // outside = above input groups, inside = inside result block
+  className?: string;
+}
+
+export function SectionHeader({ icon, title, variant = 'outside', className = '' }: SectionHeaderProps) {
+  const base = variant === 'outside'
+    ? 'text-xs font-semibold text-[#6b7280] uppercase tracking-wide'
+    : 'text-xs font-semibold text-[#6b7280] mb-2';
+  return (
+    <div className={`flex items-center gap-1.5 ${base} ${className}`}>
+      <span className="text-sm">{icon}</span>
+      <span>{title}</span>
+    </div>
+  );
+}
+
+// ─── Safety Banner (Pass/Fail with IR bar) ───
+interface SafetyBannerProps {
+  label: string;
+  ir: number;              // Interaction Ratio: demand / capacity (≤1 OK, >1 NG)
+  irLimit?: number;        // default 1.0
+  capacity?: { value: number; unit: string; label: string };
+  demand?: { value: number; unit: string; label: string };
+}
+
+export function SafetyBanner({ label, ir, irLimit = 1.0, capacity, demand }: SafetyBannerProps) {
+  const isOk = ir <= irLimit;
+  const isWarning = isOk && ir > irLimit * 0.85;
+  const barPct = Math.min(120, (ir / irLimit) * 100);  // cap at 120% visual
+
+  const styles = !isOk
+    ? { bg: 'bg-red-50 border-red-200', txt: 'text-red-700', bar: 'bg-red-500', icon: '❌', status: 'NG' }
+    : isWarning
+    ? { bg: 'bg-amber-50 border-amber-200', txt: 'text-amber-700', bar: 'bg-amber-500', icon: '⚠️', status: '注意' }
+    : { bg: 'bg-emerald-50 border-emerald-200', txt: 'text-emerald-700', bar: 'bg-emerald-500', icon: '✅', status: 'OK' };
+
+  return (
+    <div className={`rounded-lg border p-3 ${styles.bg}`}>
+      <div className="flex items-center justify-between mb-2">
+        <div className="flex items-center gap-1.5">
+          <span className="text-lg">{styles.icon}</span>
+          <span className={`text-sm font-semibold ${styles.txt}`}>{label} ({styles.status})</span>
+        </div>
+        <span className={`text-sm font-bold tabular-nums ${styles.txt}`}>IR {ir.toFixed(2)}</span>
+      </div>
+      <div className="w-full bg-white/70 rounded-full h-1.5 overflow-hidden">
+        <div className={`h-1.5 rounded-full ${styles.bar} transition-all`} style={{ width: `${barPct}%` }} />
+      </div>
+      {(capacity || demand) && (
+        <div className="flex justify-between text-xs mt-1.5 text-[#6b7280] tabular-nums">
+          {capacity && <span>{capacity.label} {capacity.value.toFixed(1)} {capacity.unit}</span>}
+          {demand && <span>{demand.label} {demand.value.toFixed(1)} {demand.unit}</span>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export interface RebarLine {
   label: string;
   weight: number;

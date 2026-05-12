@@ -17,7 +17,7 @@ type Tab = 'list' | 'summary' | 'settings';
 type SortMode = 'time' | 'type' | 'name';
 
 const TYPE_ORDER: ComponentType[] = [
-  'column', 'beam', 'slab', 'wall', 'floor', 'foundation', 'equipFound', 'stair', 'opening', 'manualRC', 'custom',
+  'column', 'beam', 'slab', 'wall', 'floor', 'foundation', 'equipFound', 'stair', 'opening', 'steelMember', 'steelPlate', 'manualRC', 'custom',
 ];
 
 const SUMMARY_TYPE_LABELS: Record<ComponentType, string> = {
@@ -32,6 +32,8 @@ const SUMMARY_TYPE_LABELS: Record<ComponentType, string> = {
   opening: '開口',
   manualRC: '手填',
   custom: '自訂',
+  steelMember: '鋼構件',
+  steelPlate: '鋼板',
 };
 
 const TYPE_BADGE_COLORS: Record<ComponentType, string> = {
@@ -46,6 +48,8 @@ const TYPE_BADGE_COLORS: Record<ComponentType, string> = {
   opening: 'bg-rose-50 text-rose-700',
   manualRC: 'bg-gray-50 text-gray-700',
   custom: 'bg-orange-50 text-orange-700',
+  steelMember: 'bg-slate-100 text-slate-700',
+  steelPlate: 'bg-zinc-100 text-zinc-700',
 };
 
 const TYPE_BUTTON_COLORS: Record<ComponentType, string> = {
@@ -60,6 +64,8 @@ const TYPE_BUTTON_COLORS: Record<ComponentType, string> = {
   opening: 'bg-rose-50 text-rose-700 border border-rose-100 hover:bg-rose-100',
   manualRC: 'bg-gray-100 text-gray-700 border border-gray-200 hover:bg-gray-200',
   custom: 'bg-orange-50 text-orange-700 border border-orange-100 hover:bg-orange-100',
+  steelMember: 'bg-slate-100 text-slate-700 border border-slate-200 hover:bg-slate-200',
+  steelPlate: 'bg-zinc-100 text-zinc-700 border border-zinc-200 hover:bg-zinc-200',
 };
 
 export default function CaseDetail({ caseId, onBack }: Props) {
@@ -191,6 +197,10 @@ export default function CaseDetail({ caseId, onBack }: Props) {
     { type: 'stair', label: '樓梯' },
     { type: 'opening', label: '開口扣除' },
   ];
+  const steelTypes: { type: ComponentType; label: string }[] = [
+    { type: 'steelMember', label: '鋼構件' },
+    { type: 'steelPlate', label: '鋼板/板材' },
+  ];
   const otherTypes: { type: ComponentType; label: string }[] = [
     { type: 'manualRC', label: '標準手填' },
     { type: 'custom', label: '自訂項目' },
@@ -308,6 +318,18 @@ export default function CaseDetail({ caseId, onBack }: Props) {
             <h3 className="font-semibold text-[#1a1a2e] mb-3 text-sm tracking-tight">RC 構件</h3>
             <div className="grid grid-cols-3 gap-2.5 mb-5">
               {rcTypes.map((t) => (
+                <button
+                  key={t.type}
+                  onClick={() => addComponent(t.type)}
+                  className={`h-12 rounded-xl font-medium text-sm transition-all duration-200 active:scale-95 ${TYPE_BUTTON_COLORS[t.type]}`}
+                >
+                  {t.label}
+                </button>
+              ))}
+            </div>
+            <h3 className="font-semibold text-[#1a1a2e] mb-3 text-sm tracking-tight">鋼構</h3>
+            <div className="grid grid-cols-3 gap-2.5 mb-5">
+              {steelTypes.map((t) => (
                 <button
                   key={t.type}
                   onClick={() => addComponent(t.type)}

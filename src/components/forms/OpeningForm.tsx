@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { OpeningData } from '../../data/types';
 import { calcOpening } from '../../calc/opening';
 import { getRebarSpec } from '../../data/rebarSpecs';
-import { NumberField, RebarSelect, SelectField, ResultRow, RebarDetailSection, RebarLine } from '../FormFields';
+import { NumberField, RebarSelect, SelectField, ResultRow, RebarDetailSection, RebarLine, SectionHeader } from '../FormFields';
 import { fmt2, fmt1 } from '../format';
 
 interface Props {
@@ -39,18 +39,18 @@ export default function OpeningForm({ comp, onUpdate, barLengthM }: Props) {
         options={[{ value: 'wall', label: '牆' }, { value: 'slab', label: '樓板' }]}
       />
 
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3">尺寸 (cm)</div>
+      <SectionHeader icon="📐" title="尺寸 (cm)" className="mt-3" />
       <NumberField label="開口寬" value={comp.openWidth} onChange={(v) => onUpdate({ openWidth: v })} unit="cm" placeholder="例: 100" />
       <NumberField label="開口高" value={comp.openHeight} onChange={(v) => onUpdate({ openHeight: v })} unit="cm" placeholder="例: 210" />
       <NumberField label="構件厚" value={comp.thickness} onChange={(v) => onUpdate({ thickness: v })} unit="cm" placeholder="例: 20" />
       <NumberField label="原間距" value={comp.originalSpacing} onChange={(v) => onUpdate({ originalSpacing: v })} unit="cm" placeholder="例: 20" />
       <NumberField label="數量" value={comp.quantity} onChange={(v) => onUpdate({ quantity: v })} step="1" placeholder="例: 1" />
 
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3">補強筋</div>
+      <SectionHeader icon="🔩" title="補強筋" className="mt-3" />
       <RebarSelect label="補強筋" value={comp.reinfBar} onChange={(v) => onUpdate({ reinfBar: v })} />
 
       <div className="bg-gray-50 rounded-lg p-3 mt-3">
-        <div className="text-xs font-semibold text-gray-500 mb-2">扣除/補強結果</div>
+        <SectionHeader icon="📊" title="扣除/補強結果" variant="inside" />
         <ResultRow label="扣除混凝土 fc'=280" value={`-${fmt2(result.deductConcrete)} m³`} highlight />
         <ResultRow label="扣除模板" value={`-${fmt2(result.deductFormwork)} m²`} />
         <RebarDetailSection lines={rebarLines} sd280Total={result.totalRebarSD280} sd420Total={result.totalRebarSD420} />

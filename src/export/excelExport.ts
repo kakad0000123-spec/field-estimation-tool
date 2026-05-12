@@ -1,6 +1,6 @@
 import * as XLSX from 'xlsx';
 import { saveAs } from 'file-saver';
-import { EstimationCase, ComponentData, ColumnData, BeamData, SlabData, WallData, FloorData, FoundationData, EquipFoundData, StairData, OpeningData, ManualRCData, CustomData } from '../data/types';
+import { EstimationCase, ComponentData, ColumnData, BeamData, SlabData, WallData, FloorData, FoundationData, EquipFoundData, StairData, OpeningData, ManualRCData, CustomData, SteelMemberData, SteelPlateData } from '../data/types';
 import { calcColumn } from '../calc/column';
 import { calcBeam } from '../calc/beam';
 import { calcSlab } from '../calc/slab';
@@ -10,6 +10,8 @@ import { calcFoundation } from '../calc/foundation';
 import { calcEquipFound } from '../calc/equipFound';
 import { calcStair } from '../calc/stair';
 import { calcOpening } from '../calc/opening';
+import { calcSteelMember, calcSteelPlate } from '../calc/steelMember';
+import { getSteelSection, getSteelPlate } from '../data/steelSections';
 import { aggregateResults, buildSummaryLines } from '../calc/summary';
 import { generateCalcDetailSheet } from './calcDetailSheet';
 
@@ -175,6 +177,60 @@ export async function exportToExcel(caseData: EstimationCase, components: Compon
       }
     }
     addSheet(wb, '12-\u5176\u4ED6', otherData);
+  }
+
+  // 12. Steel members
+  const steelMembers = components.filter((c) => c.type === 'steelMember') as SteelMemberData[];
+  if (steelMembers.length > 0) {
+    const smData: (string | number | null)[][] = [
+      ['鋼構件', '名稱', '備註', '斷面類型', '規格', '材質', '長度(mm)', '數量', '塗裝', '塗裝長度(mm)', '扣梁上面積', '單位重(kg/m)', '表面積(m²/m)', '總長(m)', '總重(kg)', '塗裝面積(m²)'],
+    ];
+    let totalWt = 0;
+    let totalPaint = 0;
+    for (const m of steelMembers) {
+      const spec = getSteelSection(m.section);
+      const r = calcSteelMember(m);
+      smData.push([
+        '', m.label, m.note, m.sectionType, m.section, m.grade,
+        m.length, m.quantity, m.coating, m.coatingLength || 0, m.deductTopArea ? '是' : '否',
+        spec?.weight ?? 0, spec?.surfaceArea ?? 0,
+        Number(r.totalLength.toFixed(3)),
+        Number(r.totalWeight.toFixed(2)),
+        Number(r.paintArea.toFixed(3)),
+      ]);
+      totalWt += r.totalWeight;
+      totalPaint += r.paintArea;
+    }
+    smData.push([]);
+    smData.push(['小計', '', '', '', '', '', '', '', '', '', '', '', '', '', Number(totalWt.toFixed(2)), Number(totalPaint.toFixed(3))]);
+    addSheet(wb, '13-鋼構件', smData);
+  }
+
+  // 13. Steel plates
+  const steelPlates = components.filter((c) => c.type === 'steelPlate') as SteelPlateData[];
+  if (steelPlates.length > 0) {
+    const spData: (string | number | null)[][] = [
+      ['鋼板', '名稱', '備註', '板類型', '規格', '材質', '長(mm)', '寬(mm)', '數量', '塗裝', '單位重(kg/m²)', '總面積(m²)', '總重(kg)', '塗裝面積(m²)'],
+    ];
+    let totalWt = 0;
+    let totalPaint = 0;
+    for (const p of steelPlates) {
+      const spec = getSteelPlate(p.plate);
+      const r = calcSteelPlate(p);
+      spData.push([
+        '', p.label, p.note, p.plateType, p.plate, p.grade,
+        p.length, p.width, p.quantity, p.coating,
+        spec?.weight ?? 0,
+        Number(r.totalArea.toFixed(3)),
+        Number(r.totalWeight.toFixed(2)),
+        Number(r.paintArea.toFixed(3)),
+      ]);
+      totalWt += r.totalWeight;
+      totalPaint += r.paintArea;
+    }
+    spData.push([]);
+    spData.push(['小計', '', '', '', '', '', '', '', '', '', '', '', Number(totalWt.toFixed(2)), Number(totalPaint.toFixed(3))]);
+    addSheet(wb, '14-鋼板', spData);
   }
 
   // Calculation Detail sheet

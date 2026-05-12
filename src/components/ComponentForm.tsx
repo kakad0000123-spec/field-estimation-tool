@@ -10,6 +10,8 @@ import StairForm from './forms/StairForm';
 import OpeningForm from './forms/OpeningForm';
 import ManualRCForm from './forms/ManualRCForm';
 import CustomForm from './forms/CustomForm';
+import SteelMemberForm from './forms/SteelMemberForm';
+import SteelPlateForm from './forms/SteelPlateForm';
 
 interface Props {
   comp: ComponentData;
@@ -63,6 +65,8 @@ export default function ComponentForm({ comp, onUpdate, barLengthM }: Props) {
       case 'opening': return <OpeningForm comp={comp} onUpdate={onUpdate} barLengthM={barLengthM} />;
       case 'manualRC': return <ManualRCForm comp={comp} onUpdate={onUpdate} />;
       case 'custom': return <CustomForm comp={comp} onUpdate={onUpdate} />;
+      case 'steelMember': return <SteelMemberForm comp={comp} onUpdate={onUpdate} />;
+      case 'steelPlate': return <SteelPlateForm comp={comp} onUpdate={onUpdate} />;
     }
   };
 

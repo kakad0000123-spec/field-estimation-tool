@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { ColumnData } from '../../data/types';
 import { calcColumn } from '../../calc/column';
 import { getRebarSpec } from '../../data/rebarSpecs';
-import { NumberField, RebarSelect, ResultRow, RebarDetailSection, RebarLine } from '../FormFields';
+import { NumberField, RebarSelect, ResultRow, RebarDetailSection, RebarLine, SectionHeader } from '../FormFields';
 import { fmt2, fmt1 } from '../format';
 
 interface Props {
@@ -32,13 +32,13 @@ export default function ColumnForm({ comp, onUpdate, barLengthM }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">尺寸 (cm)</div>
+      <SectionHeader icon="📐" title="尺寸 (cm)" />
       <NumberField label="寬 B" value={comp.width} onChange={(v) => onUpdate({ width: v })} unit="cm" placeholder="例: 40" />
       <NumberField label="深 D" value={comp.depth} onChange={(v) => onUpdate({ depth: v })} unit="cm" placeholder="例: 40" />
       <NumberField label="高 H" value={comp.height} onChange={(v) => onUpdate({ height: v })} unit="cm" placeholder="例: 350" />
       <NumberField label="數量" value={comp.quantity} onChange={(v) => onUpdate({ quantity: v })} step="1" placeholder="例: 1" />
 
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3">配筋</div>
+      <SectionHeader icon="🔩" title="配筋" className="mt-3" />
       <RebarSelect label="主筋" value={comp.mainBar} onChange={(v) => onUpdate({ mainBar: v })} />
       <NumberField label="主筋支數" value={comp.mainBarCount} onChange={(v) => onUpdate({ mainBarCount: v })} step="1" placeholder="例: 8" />
       <RebarSelect label="箍筋" value={comp.tieBar} onChange={(v) => onUpdate({ tieBar: v })} />
@@ -46,7 +46,7 @@ export default function ColumnForm({ comp, onUpdate, barLengthM }: Props) {
       <NumberField label="繫筋支數" value={comp.crosstieCount} onChange={(v) => onUpdate({ crosstieCount: v })} step="1" placeholder="例: 2" />
 
       <div className="bg-gray-50 rounded-lg p-3 mt-3">
-        <div className="text-xs font-semibold text-gray-500 mb-2">計算結果</div>
+        <SectionHeader icon="📊" title="計算結果" variant="inside" />
         <ResultRow label="混凝土 fc'=280" value={`${fmt2(result.concrete)} m³`} highlight />
         <RebarDetailSection lines={rebarLines} sd280Total={result.totalRebarSD280} sd420Total={result.totalRebarSD420} />
         <ResultRow label="模板" value={`${fmt2(result.formwork)} m²`} />

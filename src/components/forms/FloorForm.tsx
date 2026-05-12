@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { FloorData } from '../../data/types';
 import { calcFloor } from '../../calc/floor';
 import { getRebarSpec } from '../../data/rebarSpecs';
-import { NumberField, RebarSelect, WireMeshSelect, SelectField, ResultRow, RebarDetailSection, RebarLine } from '../FormFields';
+import { NumberField, RebarSelect, WireMeshSelect, SelectField, ResultRow, RebarDetailSection, RebarLine, SectionHeader } from '../FormFields';
 import { fmt2, fmt1 } from '../format';
 
 interface Props {
@@ -32,7 +32,7 @@ export default function FloorForm({ comp, onUpdate, barLengthM }: Props) {
 
   return (
     <div className="space-y-2">
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">尺寸 (cm)</div>
+      <SectionHeader icon="📐" title="尺寸 (cm)" />
       <NumberField label="長" value={comp.length} onChange={(v) => onUpdate({ length: v })} unit="cm" placeholder="例: 500" />
       <NumberField label="寬" value={comp.width} onChange={(v) => onUpdate({ width: v })} unit="cm" placeholder="例: 400" />
       <NumberField label="厚" value={comp.thickness} onChange={(v) => onUpdate({ thickness: v })} unit="cm" placeholder="例: 15" />
@@ -42,7 +42,7 @@ export default function FloorForm({ comp, onUpdate, barLengthM }: Props) {
       <NumberField label="PC厚" value={comp.pcThickness} onChange={(v) => onUpdate({ pcThickness: v })} unit="cm" placeholder="例: 5" />
       <NumberField label="數量" value={comp.quantity} onChange={(v) => onUpdate({ quantity: v })} step="1" placeholder="例: 1" />
 
-      <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mt-3">配筋</div>
+      <SectionHeader icon="🔩" title="配筋" className="mt-3" />
       <SelectField
         label="配筋方式"
         value={comp.reinfType}
@@ -74,7 +74,7 @@ export default function FloorForm({ comp, onUpdate, barLengthM }: Props) {
       )}
 
       <div className="bg-gray-50 rounded-lg p-3 mt-3">
-        <div className="text-xs font-semibold text-gray-500 mb-2">計算結果</div>
+        <SectionHeader icon="📊" title="計算結果" variant="inside" />
         <ResultRow label="開挖" value={`${fmt2(result.excavation)} m³`} />
         <ResultRow label="混凝土 fc'=140" value={`${fmt2(result.pc)} m³`} />
         <ResultRow label="混凝土 fc'=210" value={`${fmt2(result.concrete)} m³`} highlight />

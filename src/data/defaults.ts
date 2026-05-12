@@ -40,4 +40,6 @@ export const COMPONENT_TYPE_LABELS: Record<string, string> = {
   opening: '\u958B\u53E3\u6263\u9664',
   manualRC: '\u624B\u586B',
   custom: '\u81EA\u8A02',
+  steelMember: '\u92FC\u69CB\u4EF6',
+  steelPlate: '\u92FC\u677F',
 };
