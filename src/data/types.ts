@@ -37,6 +37,7 @@ export interface SteelGrade {
   label: string;       // e.g. 'SN490B'
   fy: number;          // 降伏強度 MPa
   fu: number;          // 抗拉強度 MPa
+  standard?: string;   // 引用規範，例如 'CNS 13812 建築結構用軋鋼料'
 }
 
 // ─── Coating Type ───

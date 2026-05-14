@@ -4,7 +4,14 @@ interface Props {
   onNavigate: (toolId: ToolId) => void;
 }
 
-export type ToolId = 'rc-estimate' | 'steel-estimate';
+export type ToolId =
+  | 'rc-estimate'
+  | 'steel-estimate'
+  | 'allowable-beam'
+  | 'allowable-column'
+  | 'allowable-grating'
+  | 'allowable-deck'
+  | 'allowable-summary';
 
 interface ToolDef {
   id: ToolId | string;
@@ -32,7 +39,11 @@ const CATEGORIES: CategoryDef[] = [
     title: '結構設計與檢核',
     hint: '依規範進行設計與檢核',
     tools: [
-      { id: 'steel-section', label: '鋼構斷面選擇', description: '容許荷重 / 斷面性質速查', available: false },
+      { id: 'allowable-beam', label: '鋼梁 / 天車梁 容許荷重', description: 'ASD 法檢核彎曲、剪力、撓度', available: true },
+      { id: 'allowable-column', label: '鋼柱 容許軸力', description: 'AISC 細長比 + 梁柱組合應力', available: true },
+      { id: 'allowable-grating', label: '格柵 容許荷重', description: '均佈 + 集中荷重檢核', available: true },
+      { id: 'allowable-deck', label: 'Deck 樓板 容許荷重', description: 'LRFD 法 / ACI 318', available: true },
+      { id: 'allowable-summary', label: '構件綜合檢核總表', description: '一次看完已填寫構件 · 找最危險的', available: true },
       { id: 'rc-design', label: 'RC 梁柱檢核', description: '彎矩、剪力、軸力檢核', available: false },
     ],
   },

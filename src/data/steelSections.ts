@@ -260,3 +260,17 @@ export const STEEL_TYPE_LABELS: Record<string, string> = {
   GR: '格柵板',
   DK: '樓承板',
 };
+
+// 各型鋼斷面的尺寸/單位重引用規範
+export const STEEL_TYPE_STANDARDS: Record<string, string> = {
+  H: 'JIS G 3192 / CNS 14165 熱軋 H 型鋼尺寸',
+  I: 'JIS G 3192 / CNS 14165 熱軋 I 型鋼尺寸',
+  C: 'JIS G 3192 / CNS 2611 槽鋼',
+  L: 'JIS G 3192 / CNS 2611 等邊角鋼',
+  P: 'JIS G 3444 / CNS 4435 一般構造用碳鋼鋼管',
+  BOX: '銲接箱型鋼（依 CNS 板厚規格組立）',
+  PL: 'JIS G 3193 / CNS 6183 熱軋鋼板',
+  CP: 'JIS G 3193 / CNS 6183 熱軋鋼板（花紋面）',
+  GR: '格柵板（鋼板組立件）',
+  DK: '樓承板（冷軋鋼板成型件）',
+};
