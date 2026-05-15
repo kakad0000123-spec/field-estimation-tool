@@ -5,8 +5,7 @@ interface Props {
 }
 
 export type ToolId =
-  | 'rc-estimate'
-  | 'steel-estimate'
+  | 'estimate'
   | 'allowable-beam'
   | 'allowable-column'
   | 'allowable-grating'
@@ -31,8 +30,7 @@ const CATEGORIES: CategoryDef[] = [
     title: '施工估算',
     hint: '快速估算用料、產出 Excel',
     tools: [
-      { id: 'rc-estimate', label: 'RC 數量估算', description: '柱、梁、板、牆、基礎等 RC 構件用料估算', available: true },
-      { id: 'steel-estimate', label: '鋼構重量計算', description: 'H 型鋼、角鋼、鋼板斷面、塗裝面積', available: true },
+      { id: 'estimate', label: '工程數量估算', description: 'RC 構件 + 鋼構 + 塗裝 + 自訂項目', available: true },
     ],
   },
   {
