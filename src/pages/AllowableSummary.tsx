@@ -63,6 +63,9 @@ function buildBeamRow(): SummaryRow {
     W_point: s.W_point ?? 0,
     E_point: s.E_point ?? 0,
     My_input: s.My_input ?? 0,
+    compressionContinuous: s.compressionContinuous ?? false,
+    Lb_mm: s.Lb_mm ?? 0,
+    Cb: s.Cb ?? 1.0,
   });
   const IR_max = Math.max(r.IR_biaxial, r.IR_V, r.IR_delta);
   const verdict = r.overall || '—';

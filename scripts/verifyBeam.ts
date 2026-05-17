@@ -20,6 +20,8 @@ function run(name: string, params: Partial<BeamInput> & { sectionLabel: string }
     W_uniform: 0, W_point: 0,
     E_point: 0,
     My_input: 0,
+    compressionContinuous: false,
+    Lb_mm: 0, Cb: 1.0,
     ...params,
   } as BeamInput;
   const r = calcBeam(input);
@@ -27,7 +29,9 @@ function run(name: string, params: Partial<BeamInput> & { sectionLabel: string }
   console.log('\n=== ' + name + ' ===');
   console.log('method:', r.method, '| section:', params.sectionLabel, '| support:', input.support);
   console.log('Sx:', r.Sx, 'mm³ | Zx:', r.Zx.toFixed(0), 'mm³ | Sy:', r.Sy.toFixed(0), '| Zy:', r.Zy.toFixed(0));
-  console.log('Mcx:', r.Mcx_kgm.toFixed(1), 'kg·m | Mcy:', r.Mcy_kgm.toFixed(1), 'kg·m | Vc:', r.Vc_kg.toFixed(0), 'kg | Δa:', r.delta_allow.toFixed(2), 'mm');
+  console.log('Classification:', r.classification, '| LTB zone:', r.ltbZone, '| Lb used:', r.Lb_used_mm.toFixed(0), 'mm');
+  console.log('Lp:', r.Lp_mm.toFixed(0), 'mm | Lr:', Number.isFinite(r.Lr_mm) ? r.Lr_mm.toFixed(0) : '∞', 'mm | Reduction factor:', (r.reductionFactor*100).toFixed(1)+'%');
+  console.log('Mcx:', r.Mcx_kgm.toFixed(1), 'kg·m (full:', r.Mcx_full_kgm.toFixed(1), ') | Mcy:', r.Mcy_kgm.toFixed(1), 'kg·m | Vc:', r.Vc_kg.toFixed(0), 'kg | Δa:', r.delta_allow.toFixed(2), 'mm');
   console.log('wD:', r.wD_total.toFixed(3), 'kg/m');
   console.log('Combinations:');
   for (const c of r.combos) {
@@ -89,4 +93,39 @@ run('SAMPLE 6: LRFD 設備梁含地震反力 E=800 kg', {
 run('SAMPLE 7: LRFD NG 超載', {
   method: 'LRFD', sectionLabel: 'H-100x50x5x7',
   span: 6000, L_point: 5000, L_impact: 1.0,
+});
+
+// ── 9. 結實性分類測試（短跨 + 壓力翼板連續）
+run('SAMPLE 8: Compact, 壓力側連續支撐 (無 LTB)', {
+  method: 'LRFD', sectionLabel: 'H-200x200x8x12',
+  span: 4000, L_uniform: 300,
+  compressionContinuous: true,
+});
+
+// ── 10. LTB 塑性區 (Lb < Lp)
+run('SAMPLE 9: 短 Lb=500mm，預期 Plastic LTB', {
+  method: 'LRFD', sectionLabel: 'H-200x200x8x12',
+  span: 4000, L_uniform: 300,
+  Lb_mm: 500,
+});
+
+// ── 11. LTB 非彈性區 (Lp < Lb < Lr)
+run('SAMPLE 10: 中等 Lb=3000mm，預期 Inelastic LTB', {
+  method: 'LRFD', sectionLabel: 'H-300x150x6.5x9',
+  span: 6000, L_uniform: 200,
+  Lb_mm: 3000,
+});
+
+// ── 12. LTB 彈性區 (Lb > Lr，大幅折減)
+run('SAMPLE 11: 長 Lb=8000mm，預期 Elastic LTB', {
+  method: 'LRFD', sectionLabel: 'H-300x150x6.5x9',
+  span: 8000, L_uniform: 100,
+  Lb_mm: 8000,
+});
+
+// ── 13. 細長腹板測試
+run('SAMPLE 12: 嘗試一根薄腹板 H 形（看是否 Non-compact）', {
+  method: 'LRFD', sectionLabel: 'H-700x300x13x24',
+  span: 6000, L_uniform: 500,
+  compressionContinuous: true,
 });

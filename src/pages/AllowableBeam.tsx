@@ -9,6 +9,34 @@ import {
 } from '../calc/allowable/beam';
 import { NumberField, SelectField, SafetyBanner, SectionHeader } from '../components/FormFields';
 import { Row, Stat, Hr, fmt0, fmt1, fmt2, fmtPct } from '../components/allowable/uiHelpers';
+import type { Classification, LTBZone } from '../calc/allowable/sectionLimits';
+
+function ClassificationBadge({ cls }: { cls: Classification }) {
+  const map: Record<Classification, { txt: string; cls: string }> = {
+    'Compact':     { txt: 'Compact 結實',       cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    'Non-compact': { txt: 'Non-compact 非結實', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    'Slender':     { txt: 'Slender 細長',       cls: 'bg-red-50 text-red-700 border-red-200' },
+    'N/A':         { txt: 'N/A 未判定',          cls: 'bg-gray-50 text-gray-500 border-gray-200' },
+  };
+  const m = map[cls];
+  return (
+    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${m.cls}`}>{m.txt}</span>
+  );
+}
+
+function LTBBadge({ zone }: { zone: LTBZone }) {
+  const map: Record<LTBZone, { txt: string; cls: string }> = {
+    'No LTB':        { txt: '無 LTB',        cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    'Plastic':       { txt: '塑性區（無折減）', cls: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
+    'Inelastic LTB': { txt: '非彈性 LTB（折減）', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
+    'Elastic LTB':   { txt: '彈性 LTB（顯著折減）', cls: 'bg-red-50 text-red-700 border-red-200' },
+    'N/A':           { txt: 'N/A',           cls: 'bg-gray-50 text-gray-500 border-gray-200' },
+  };
+  const m = map[zone];
+  return (
+    <span className={`text-[11px] font-medium px-2 py-0.5 rounded-full border ${m.cls}`}>{m.txt}</span>
+  );
+}
 
 interface Props {
   onBack: () => void;
@@ -38,6 +66,8 @@ const PRESETS: Preset[] = [
       L_uniform: 200, L_point: 0, L_impact: 1.0,
       W_uniform: 0, W_point: 0, E_point: 0,
       My_input: 0,
+      compressionContinuous: true,  // 平台梁假設樓板焊接支撐壓力翼板
+      Lb_mm: 0, Cb: 1.0,
       deflectionLabel: '一般鋼梁｜總載重撓度 L/240',
     },
   },
@@ -53,6 +83,8 @@ const PRESETS: Preset[] = [
       L_uniform: 0, L_point: 1500, L_impact: 1.0,
       W_uniform: 0, W_point: 0, E_point: 800,
       My_input: 0,
+      compressionContinuous: false,  // 設備梁通常無壓力側連續支撐
+      Lb_mm: 0, Cb: 1.32,            // 跨中集中：Cb ≈ 1.32
       deflectionLabel: '設備支承梁｜其他設備 L/400 且 ≤ 21 mm',
     },
   },
@@ -68,6 +100,8 @@ const PRESETS: Preset[] = [
       L_uniform: 0, L_point: 2000, L_impact: 1.25,
       W_uniform: 0, W_point: 0, E_point: 0,
       My_input: 0,
+      compressionContinuous: false,  // 天車梁底翼受壓，無樓板支撐
+      Lb_mm: 0, Cb: 1.0,             // 保守
       deflectionLabel: '天車梁(Monorail)｜簡支單軌 L/800',
     },
   },
@@ -91,6 +125,11 @@ export default function AllowableBeam({ onBack }: Props) {
   const [W_point, setWP] = useState<number>(() => stored?.W_point ?? 0);
   const [E_point, setEP] = useState<number>(() => stored?.E_point ?? 0);
   const [My_input, setMy] = useState<number>(() => stored?.My_input ?? 0);
+  const [compressionContinuous, setCompressionContinuous] = useState<boolean>(
+    () => stored?.compressionContinuous ?? false,
+  );
+  const [Lb_mm, setLb] = useState<number>(() => stored?.Lb_mm ?? 0);  // 0 = 用 span
+  const [Cb, setCb] = useState<number>(() => stored?.Cb ?? 1.0);
   const [deflectionLabel, setDeflectionLabel] = useState<string>(
     () => stored?.deflectionLabel ?? '一般鋼梁｜總載重撓度 L/240',
   );
@@ -107,10 +146,12 @@ export default function AllowableBeam({ onBack }: Props) {
       span, includeSelfWeight, D_add,
       L_uniform, L_point, L_impact,
       W_uniform, W_point, E_point, My_input,
+      compressionContinuous, Lb_mm, Cb,
       deflectionLabel,
     });
   }, [method, usage, support, shape, sectionLabel, gradeLabel, span, includeSelfWeight,
-      D_add, L_uniform, L_point, L_impact, W_uniform, W_point, E_point, My_input, deflectionLabel]);
+      D_add, L_uniform, L_point, L_impact, W_uniform, W_point, E_point, My_input,
+      compressionContinuous, Lb_mm, Cb, deflectionLabel]);
 
   const applyPreset = (p: Preset) => {
     const x = p.patch;
@@ -126,6 +167,9 @@ export default function AllowableBeam({ onBack }: Props) {
     setLU(x.L_uniform ?? 0); setLP(x.L_point ?? 0); setLImpact(x.L_impact ?? 1.0);
     setWU(x.W_uniform ?? 0); setWP(x.W_point ?? 0);
     setEP(x.E_point ?? 0); setMy(x.My_input ?? 0);
+    setCompressionContinuous(x.compressionContinuous ?? false);
+    setLb(x.Lb_mm ?? 0);
+    setCb(x.Cb ?? 1.0);
     if (x.deflectionLabel) setDeflectionLabel(x.deflectionLabel);
     if ((x.W_uniform ?? 0) !== 0 || (x.W_point ?? 0) !== 0 || (x.E_point ?? 0) !== 0 || (x.My_input ?? 0) !== 0) {
       setShowAdvanced(true);
@@ -149,6 +193,7 @@ export default function AllowableBeam({ onBack }: Props) {
     span, includeSelfWeight, D_add,
     L_uniform, L_point, L_impact,
     W_uniform, W_point, E_point, My_input,
+    compressionContinuous, Lb_mm, Cb,
   };
   const r = useMemo(() => calcBeam(input), [input]);
 
@@ -280,21 +325,82 @@ export default function AllowableBeam({ onBack }: Props) {
           )}
         </section>
 
+        {/* 側向支撐（LTB 用） */}
+        <section className="bg-white rounded-xl border border-gray-100 p-4 shadow-sm">
+          <SectionHeader icon="↔️" title="側向支撐（LTB 檢核）" />
+          <div className="mt-3 space-y-2">
+            <SelectField
+              label="壓力側連續支撐？"
+              value={compressionContinuous ? 'yes' : 'no'}
+              onChange={(v) => setCompressionContinuous(v === 'yes')}
+              options={[
+                { value: 'yes', label: '是（樓板/鋼承板焊接，無 LTB）' },
+                { value: 'no', label: '否（梁兩端支承，採實際 Lb）' },
+              ]}
+            />
+            {!compressionContinuous && (
+              <>
+                <NumberField key={`Lb-${formRev}`} label="無支撐長 Lb" value={Lb_mm} onChange={setLb} unit="mm"
+                  placeholder={`留 0 採跨距 ${span} mm`} />
+                <NumberField key={`Cb-${formRev}`} label="Cb 修正係數" value={Cb} onChange={setCb} unit=""
+                  placeholder="保守 1.0；簡支均佈 1.14；中間集中 1.32" />
+              </>
+            )}
+            {compressionContinuous && (
+              <div className="text-[11px] text-emerald-700 px-1">✅ 壓力翼板連續支撐 → 不發生側向扭轉挫屈</div>
+            )}
+          </div>
+        </section>
+
         {/* 斷面性質 */}
         <section className="bg-gray-50 rounded-xl border border-gray-100 p-4">
           <SectionHeader icon="📊" title="斷面性質（自動帶入）" />
           {section ? (
-            <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1.5 text-[13px] tabular-nums">
-              <Stat label="H/d" v={section.d} u="mm" />
-              <Stat label="B/bf" v={section.bf} u="mm" />
-              <Stat label="A" v={section.A} u="mm²" />
-              <Stat label="單位重" v={section.weight} u="kg/m" />
-              <Stat label="Sx" v={section.Sx} u="mm³" />
-              <Stat label="Zx (近似)" v={fmt0(r.Zx)} u="mm³" />
-              <Stat label="Sy" v={fmt0(r.Sy)} u="mm³" />
-              <Stat label="Zy (近似)" v={fmt0(r.Zy)} u="mm³" />
-              <Stat label="Aw" v={section.Aw} u="mm²" />
-            </div>
+            <>
+              <div className="mt-2 grid grid-cols-3 gap-x-3 gap-y-1.5 text-[13px] tabular-nums">
+                <Stat label="H/d" v={section.d} u="mm" />
+                <Stat label="B/bf" v={section.bf} u="mm" />
+                <Stat label="A" v={section.A} u="mm²" />
+                <Stat label="單位重" v={section.weight} u="kg/m" />
+                <Stat label="Sx" v={section.Sx} u="mm³" />
+                <Stat label="Zx (近似)" v={fmt0(r.Zx)} u="mm³" />
+                <Stat label="Sy" v={fmt0(r.Sy)} u="mm³" />
+                <Stat label="Zy (近似)" v={fmt0(r.Zy)} u="mm³" />
+                <Stat label="Aw" v={section.Aw} u="mm²" />
+              </div>
+
+              {/* 結實性 + LTB 徽章 */}
+              {r.bendingDetail && (
+                <div className="mt-3 pt-3 border-t border-gray-100">
+                  <div className="flex flex-wrap gap-2 items-center">
+                    <span className="text-[11px] text-[#6b7280]">結實性：</span>
+                    <ClassificationBadge cls={r.classification} />
+                    <span className="text-[11px] text-[#6b7280] ml-2">LTB：</span>
+                    <LTBBadge zone={r.ltbZone} />
+                    {r.reductionFactor < 1 && (
+                      <span className="text-[11px] text-amber-700 font-medium">
+                        折減因子 {(r.reductionFactor * 100).toFixed(1)}%
+                      </span>
+                    )}
+                  </div>
+                  {r.bendingDetail.classification.classification !== 'N/A' && r.bendingDetail.classification.classification !== 'Compact' && (
+                    <div className="text-[11px] text-[#9ca3af] mt-1">
+                      翼板 λ = {fmt2(r.bendingDetail.classification.flangeRatio)}
+                      （λp = {fmt2(r.bendingDetail.classification.flangeLambdaP)}, λr = {fmt2(r.bendingDetail.classification.flangeLambdaR)}）
+                      <br />
+                      腹板 λ = {fmt2(r.bendingDetail.classification.webRatio)}
+                      （λp = {fmt2(r.bendingDetail.classification.webLambdaP)}, λr = {fmt2(r.bendingDetail.classification.webLambdaR)}）
+                    </div>
+                  )}
+                  {r.ltbZone !== 'No LTB' && r.ltbZone !== 'N/A' && (
+                    <div className="text-[11px] text-[#9ca3af] mt-1">
+                      Lp = {fmt0(r.Lp_mm)} mm, Lr = {Number.isFinite(r.Lr_mm) ? fmt0(r.Lr_mm) : '∞'} mm,
+                      Lb = {fmt0(r.Lb_used_mm)} mm
+                    </div>
+                  )}
+                </div>
+              )}
+            </>
           ) : <div className="text-sm text-gray-400 mt-2">尚未選擇斷面</div>}
         </section>
 
@@ -317,7 +423,11 @@ export default function AllowableBeam({ onBack }: Props) {
             )}
             <Hr />
             <Row label={method === 'ASD' ? '強軸容許彎矩 M_allow,x' : '強軸 φMnx'}
-              value={`${fmt0(r.Mcx_kgm)} kg·m`} bold />
+              value={
+                r.reductionFactor < 1
+                  ? `${fmt0(r.Mcx_kgm)} kg·m（折減 ${(r.reductionFactor*100).toFixed(1)}% × ${fmt0(r.Mcx_full_kgm)}）`
+                  : `${fmt0(r.Mcx_kgm)} kg·m`
+              } bold />
             {r.Mcy_kgm > 0 && (
               <Row label={method === 'ASD' ? '弱軸容許彎矩 M_allow,y' : '弱軸 φMny'}
                 value={`${fmt0(r.Mcy_kgm)} kg·m`} bold />
@@ -464,8 +574,9 @@ export default function AllowableBeam({ onBack }: Props) {
             <div className="pt-1 border-t border-gray-100 mt-2">
               <b className="text-[#1a1a2e]">設計邊界（適用範圍）：</b>
               <ol className="ml-4 list-decimal mt-1 space-y-0.5">
-                <li>假設結實斷面（Compact）；未自動檢核翼板/腹板寬厚比折減</li>
-                <li>未檢核側向扭轉挫屈 (LTB)；長跨無側向支撐請另算或加密支撐</li>
+                <li>結實性自動分類 (Compact / Non-compact / Slender) 適用於 H/I/槽鋼/BOX；P 圓管、L 角鋼視為 compact</li>
+                <li>LTB 適用於 H/I/槽鋼；BOX (扭轉剛度高) 與 P (軸對稱) 不發生 LTB</li>
+                <li>LTB 計算採 AISC F2 公式 + Cb 修正；Cb 預設 1.0 保守，簡支均佈可採 1.14，集中可採 1.32</li>
                 <li>Zx / Zy 採塑性係數近似（Sx × 1.10~1.27 視形狀），精確值請查 CNS 14165 表訂</li>
                 <li>雙軸互制採線性疊加 H1 = (Mux/φMnx)+(Muy/φMny)；高軸壓力時應改用完整 H1-1b</li>
                 <li>地震力 E 為「結構技師提供之構件反力」，非由本工具計算建築物耐震反應</li>

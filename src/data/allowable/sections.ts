@@ -5042,3 +5042,43 @@ export function getPlasticZy(section: AllowSection | null): number {
   if (!section || !Sy) return 0;
   return Sy * (PLASTIC_FACTOR[section.shape] ?? 1.12);
 }
+
+// ─── 斷面常數（給斷面結實性 + LTB 用） ───
+// 主要適用於 H/I/槽鋼 等薄壁開口斷面。其他斷面回傳 0 表示跳過。
+
+/** St-Venant 扭轉常數 J (mm⁴) — 薄壁開口斷面：J ≈ (1/3) Σ b·t³ */
+export function getTorsionalJ(section: AllowSection | null): number {
+  if (!section || !section.d || !section.bf || !section.tf || !section.tw) return 0;
+  const { d, bf, tf, tw } = section;
+  if (section.shape === 'H形鋼' || section.shape === 'I型梁') {
+    return (2 * bf * Math.pow(tf, 3) + (d - 2 * tf) * Math.pow(tw, 3)) / 3;
+  }
+  if (section.shape === '槽鋼') {
+    return (2 * bf * Math.pow(tf, 3) + d * Math.pow(tw, 3)) / 3;
+  }
+  return 0;
+}
+
+/** 翹曲常數 Cw (mm⁶) — 雙對稱 I 形：Cw = Iy·h0²/4，h0 = d - tf */
+export function getWarpingCw(section: AllowSection | null): number {
+  if (!section || !section.d || !section.tf || !section.Iy) return 0;
+  if (section.shape === 'H形鋼' || section.shape === 'I型梁') {
+    const h0 = section.d - section.tf;
+    return section.Iy * h0 * h0 / 4;
+  }
+  return 0;
+}
+
+/** 有效迴轉半徑 r_ts (mm) — 用於 LTR 之 elastic LTB Lr 計算 */
+export function get_rts(section: AllowSection | null): number {
+  if (!section || !section.Sx || !section.Iy) return 0;
+  const Cw = getWarpingCw(section);
+  if (!Cw) return 0;
+  return Math.sqrt(Math.sqrt(section.Iy * Cw) / section.Sx);
+}
+
+/** 翼板間距 h0 = d - tf (mm)（雙對稱 I 形） */
+export function get_h0(section: AllowSection | null): number {
+  if (!section || !section.d || !section.tf) return 0;
+  return section.d - section.tf;
+}

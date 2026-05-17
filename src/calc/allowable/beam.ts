@@ -26,6 +26,7 @@ import {
   PHI_BENDING, PHI_SHEAR, FV_LRFD_FACTOR,
 } from '../../data/allowable/grades';
 import { AllowDeflection } from '../../data/allowable/deflection';
+import { calcStrongAxisCapacity, BendingCapacityResult, Classification, LTBZone } from './sectionLimits';
 
 export type DesignMethod = 'ASD' | 'LRFD';
 export type SupportType = '簡支梁' | '懸臂梁';
@@ -49,6 +50,11 @@ export interface BeamInput {
   W_point: number;         // 風集中 (kg)
   E_point: number;         // 地震反力 (kg, 設備反力)
   My_input: number;        // 弱軸彎矩直接輸入 (kg·m)
+
+  // 側向支撐參數（LTB 用）
+  compressionContinuous: boolean;  // 壓力側連續支撐？若 true 則無 LTB
+  Lb_mm: number;                   // 側向無支撐長度 (mm)。空值預設用 span
+  Cb: number;                      // 側向扭轉修正係數，預設 1.0 保守
 }
 
 interface ComboFactors { D: number; L: number; W: number; E: number; }
@@ -80,10 +86,20 @@ export interface BeamResult {
   Fv_MPa: number;
 
   // 容量
-  Mcx_kgm: number;         // 強軸容量 (kg·m)
+  Mcx_kgm: number;         // 強軸容量 (kg·m)（已含結實性 + LTB 折減）
+  Mcx_full_kgm: number;    // 強軸容量 — 未折減 (compact + 無 LTB) 之滿值
   Mcy_kgm: number;         // 弱軸容量 (kg·m)
   Vc_kg: number;           // 剪力容量 (kg)
   delta_allow: number;     // 容許撓度 (mm)
+
+  // 斷面結實性 + LTB 細節
+  classification: Classification;
+  ltbZone: LTBZone;
+  Lp_mm: number;
+  Lr_mm: number;
+  Lb_used_mm: number;      // 實際採用之 Lb (mm)
+  bendingDetail: BendingCapacityResult | null;
+  reductionFactor: number; // Mn / Mp，1.0 表示無折減
 
   // 載重組合
   combos: BeamCombo[];
@@ -119,7 +135,9 @@ export const EMPTY_BEAM_RESULT: BeamResult = {
   Fy_MPa: 0, E_MPa: 0,
   Sx: 0, Zx: 0, Sy: 0, Zy: 0, Aw: 0, Ix: 0,
   Fb_MPa: 0, Fv_MPa: 0,
-  Mcx_kgm: 0, Mcy_kgm: 0, Vc_kg: 0, delta_allow: 0,
+  Mcx_kgm: 0, Mcx_full_kgm: 0, Mcy_kgm: 0, Vc_kg: 0, delta_allow: 0,
+  classification: 'N/A', ltbZone: 'N/A', Lp_mm: 0, Lr_mm: 0, Lb_used_mm: 0,
+  bendingDetail: null, reductionFactor: 1,
   combos: [], controlCombo: null,
   M_act: 0, V_act: 0, delta_act: 0, My_act: 0,
   IR_M_x: 0, IR_M_y: 0, IR_biaxial: 0, IR_V: 0, IR_delta: 0,
@@ -208,7 +226,8 @@ function maxDeflection(
 export function calcBeam(input: BeamInput): BeamResult {
   const { method, support, section, grade, deflection, span,
     includeSelfWeight, D_add, L_uniform, L_point, L_impact,
-    W_uniform, W_point, E_point, My_input, usage: _u } = input;
+    W_uniform, W_point, E_point, My_input,
+    compressionContinuous, Lb_mm, Cb, usage: _u } = input;
   void _u;
 
   if (!section || !grade || !section.Sx || !section.Aw || !section.Ix ||
@@ -225,18 +244,26 @@ export function calcBeam(input: BeamInput): BeamResult {
   const Sy = getElasticSy(section);
   const Zy = getPlasticZy(section);
 
-  // ── 容量 ──
-  let Mcx_kgm: number, Mcy_kgm: number, Vc_kg: number;
+  // ── 強軸彎矩容量：結實性 + LTB 雙重檢核 ──
+  const Lb_used = compressionContinuous ? 0 : (Lb_mm && Lb_mm > 0 ? Lb_mm : span);
+  const CbVal = Cb && Cb > 0 ? Cb : 1.0;
+  const bending = calcStrongAxisCapacity(section, Fy, E, Lb_used, CbVal);
+  const redFactor = bending.overall_factor;   // Mn/Mp，1.0 表示無折減
+
+  // ── 容量（套用結實性 + LTB 折減） ──
+  let Mcx_kgm: number, Mcx_full_kgm: number, Mcy_kgm: number, Vc_kg: number;
   let Fb_MPa = 0, Fv_MPa = 0;
   if (method === 'ASD') {
     Fb_MPa = Fy * FB_FACTOR;
     Fv_MPa = Fy * FV_FACTOR;
-    Mcx_kgm = Fb_MPa * Sx / (N_PER_KG * 1000);
+    Mcx_full_kgm = Fb_MPa * Sx / (N_PER_KG * 1000);
+    Mcx_kgm = Mcx_full_kgm * redFactor;  // 折減後容許彎矩
     Mcy_kgm = Sy > 0 ? Fb_MPa * Sy / (N_PER_KG * 1000) : 0;
     Vc_kg = Fv_MPa * Aw / N_PER_KG;
   } else {
-    // LRFD: φMn = φ × Fy × Z
-    Mcx_kgm = PHI_BENDING * Fy * Zx / (N_PER_KG * 1000);
+    // LRFD: φMn = φ × Mn (Mn 已含結實性 + LTB 折減)
+    Mcx_full_kgm = PHI_BENDING * Fy * Zx / (N_PER_KG * 1000);
+    Mcx_kgm = PHI_BENDING * bending.Mn_Nmm / (N_PER_KG * 1000);
     Mcy_kgm = Zy > 0 ? PHI_BENDING * Fy * Zy / (N_PER_KG * 1000) : 0;
     Vc_kg = PHI_SHEAR * FV_LRFD_FACTOR * Fy * Aw / N_PER_KG;
   }
@@ -321,7 +348,14 @@ export function calcBeam(input: BeamInput): BeamResult {
     Fy_MPa: Fy, E_MPa: E,
     Sx, Zx, Sy, Zy, Aw, Ix,
     Fb_MPa, Fv_MPa,
-    Mcx_kgm, Mcy_kgm, Vc_kg, delta_allow,
+    Mcx_kgm, Mcx_full_kgm, Mcy_kgm, Vc_kg, delta_allow,
+    classification: bending.classification.classification,
+    ltbZone: bending.ltb.zone,
+    Lp_mm: bending.ltb.Lp,
+    Lr_mm: bending.ltb.Lr,
+    Lb_used_mm: Lb_used,
+    bendingDetail: bending,
+    reductionFactor: redFactor,
     combos, controlCombo,
     M_act, V_act, delta_act, My_act,
     IR_M_x, IR_M_y, IR_biaxial, IR_V, IR_delta,

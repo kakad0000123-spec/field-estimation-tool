@@ -24,6 +24,9 @@ export type StoredBeam = {
   W_point: number;     // 風集中 (kg)
   E_point: number;     // 地震反力 (kg, 設備反力)
   My_input: number;    // 弱軸彎矩直接輸入 (kg·m)
+  compressionContinuous: boolean;  // 壓力側連續支撐？
+  Lb_mm: number;       // 側向無支撐長度 (mm)
+  Cb: number;          // 側向扭轉修正係數
   deflectionLabel: string;
 };
 
