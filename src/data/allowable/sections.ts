@@ -5007,3 +5007,38 @@ export const ALLOW_SECTIONS: AllowSection[] = [
 export function getAllowSection(label: string): AllowSection | undefined {
   return ALLOW_SECTIONS.find((s) => s.label === label);
 }
+
+// ── 塑性斷面模數近似係數（Zx/Sx 與 Zy/Sy） ──
+// 註：精確值請查 CNS 14165 / AISC Steel Construction Manual 表訂值
+// 本工具採塑性係數近似 (shape factor)：
+//   H/I 型鋼：1.10 ~ 1.15 → 採 1.12
+//   槽鋼/角鋼：~1.16~1.18
+//   圓管：4/π ≈ 1.27 (薄壁)
+//   箱型：~1.15
+const PLASTIC_FACTOR: Record<string, number> = {
+  'H形鋼': 1.12,
+  'I型梁': 1.13,
+  '槽鋼': 1.16,
+  '角鋼': 1.18,
+  'P型鋼': 1.27,
+  'BOX柱': 1.15,
+};
+
+/** 強軸塑性斷面模數 Zx (mm³) — LRFD φMn 用 */
+export function getPlasticZx(section: AllowSection | null): number {
+  if (!section || !section.Sx) return 0;
+  return section.Sx * (PLASTIC_FACTOR[section.shape] ?? 1.12);
+}
+
+/** 弱軸彈性斷面模數 Sy (mm³) — ASD My/Fb 用 */
+export function getElasticSy(section: AllowSection | null): number {
+  if (!section || !section.Iy || !section.bf) return 0;
+  return section.Iy / (section.bf / 2);
+}
+
+/** 弱軸塑性斷面模數 Zy (mm³) — LRFD φMny 用 */
+export function getPlasticZy(section: AllowSection | null): number {
+  const Sy = getElasticSy(section);
+  if (!section || !Sy) return 0;
+  return Sy * (PLASTIC_FACTOR[section.shape] ?? 1.12);
+}

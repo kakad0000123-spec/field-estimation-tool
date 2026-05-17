@@ -1,9 +1,8 @@
-// Verification: cross-check TS port vs Excel sample cases
-// Three load modes × two support types
-import { ALLOW_SECTIONS } from '../src/data/allowable/sections';
+// Verification v2: ASD / LRFD / biaxial / load combination scenarios
+import { ALLOW_SECTIONS, getPlasticZx, getElasticSy } from '../src/data/allowable/sections';
 import { ALLOW_GRADES } from '../src/data/allowable/grades';
 import { ALLOW_DEFLECTIONS } from '../src/data/allowable/deflection';
-import { calcBeam, BeamInput, SupportType, LoadType } from '../src/calc/allowable/beam';
+import { calcBeam, BeamInput, DesignMethod, SupportType } from '../src/calc/allowable/beam';
 
 const sn400b = ALLOW_GRADES.find((g) => g.label === 'CNS SN400B / SM400 (t≤40)')!;
 const def240 = ALLOW_DEFLECTIONS.find((d) => d.label === '一般鋼梁｜總載重撓度 L/240')!;
@@ -12,56 +11,82 @@ const def800 = ALLOW_DEFLECTIONS.find((d) => d.label === '天車梁(Monorail)｜
 function run(name: string, params: Partial<BeamInput> & { sectionLabel: string }) {
   const section = ALLOW_SECTIONS.find((s) => s.label === params.sectionLabel)!;
   const input: BeamInput = {
-    usage: '一般鋼梁', support: '簡支梁', loadType: '集中荷重',
+    method: 'ASD' as DesignMethod,
+    usage: '一般鋼梁', support: '簡支梁' as SupportType,
     section, grade: sn400b, deflection: def240,
-    span: 6000, includeSelfWeight: true, wD_add: 0,
-    P: 0, wL: 0, loadFactor: 1.0,
+    span: 6000, includeSelfWeight: true,
+    D_add: 0,
+    L_uniform: 0, L_point: 0, L_impact: 1.0,
+    W_uniform: 0, W_point: 0,
+    E_point: 0,
+    My_input: 0,
     ...params,
   } as BeamInput;
   const r = calcBeam(input);
 
   console.log('\n=== ' + name + ' ===');
-  console.log('section:', params.sectionLabel, '| support:', input.support, '| loadType:', input.loadType,
-    '| span:', input.span, '| P:', input.P, '| wL:', input.wL, '| factor:', input.loadFactor);
-  console.log('Fb/Fv:', r.Fb_MPa.toFixed(2), '/', r.Fv_MPa.toFixed(2), 'MPa');
-  console.log('M_allow:', r.M_allow.toFixed(2), 'kg·m | V_allow:', r.V_allow.toFixed(0), 'kg | Δa:', r.deflection_allow.toFixed(2), 'mm');
-  console.log('wD:', r.wD.toFixed(3), 'kg/m | MD:', r.MD.toFixed(2), 'kg·m | ΔD:', r.deltaD.toFixed(3), 'mm');
-  console.log('M_act:', r.M_act.toFixed(2), 'kg·m | V_act:', r.V_act.toFixed(2), 'kg | Δ_act:', r.delta_act.toFixed(3), 'mm');
-  console.log('ratios: M=' + (r.ratio_M*100).toFixed(1) + '% V=' + (r.ratio_V*100).toFixed(1) + '% Δ=' + (r.ratio_delta*100).toFixed(1) + '%');
-  console.log('overall:', r.overall, '| controlBy:', r.controlBy, '| exceeded:', r.exceeded);
-  console.log('Ps_service:', r.Ps_service.toFixed(2), 'kg | Pr:', r.Pr_rated.toFixed(2), 'kg | qs_service:', r.qs_service.toFixed(2), 'kg/m');
+  console.log('method:', r.method, '| section:', params.sectionLabel, '| support:', input.support);
+  console.log('Sx:', r.Sx, 'mm³ | Zx:', r.Zx.toFixed(0), 'mm³ | Sy:', r.Sy.toFixed(0), '| Zy:', r.Zy.toFixed(0));
+  console.log('Mcx:', r.Mcx_kgm.toFixed(1), 'kg·m | Mcy:', r.Mcy_kgm.toFixed(1), 'kg·m | Vc:', r.Vc_kg.toFixed(0), 'kg | Δa:', r.delta_allow.toFixed(2), 'mm');
+  console.log('wD:', r.wD_total.toFixed(3), 'kg/m');
+  console.log('Combinations:');
+  for (const c of r.combos) {
+    const star = c === r.controlCombo ? ' ★控制' : '';
+    console.log(`  ${c.label.padEnd(20)} w=${c.w_kgPerM.toFixed(1).padStart(7)} kg/m  p=${c.p_kg.toFixed(0).padStart(6)} kg  M=${c.M_kgm.toFixed(1).padStart(8)} V=${c.V_kg.toFixed(1).padStart(7)}${star}`);
+  }
+  console.log('Control combo:', r.controlCombo?.label, '| M_act:', r.M_act.toFixed(1), '| V_act:', r.V_act.toFixed(1), '| Δ_act:', r.delta_act.toFixed(2));
+  console.log('IR_x:', (r.IR_M_x*100).toFixed(1)+'%', '| IR_y:', (r.IR_M_y*100).toFixed(1)+'%', '| IR_biax:', (r.IR_biaxial*100).toFixed(1)+'%', '| IR_V:', (r.IR_V*100).toFixed(1)+'%', '| IR_Δ:', (r.IR_delta*100).toFixed(1)+'%');
+  console.log('overall:', r.overall, '| controlBy:', r.controlBy);
 }
 
-// 1. Excel 預設樣本 — 簡支 + 集中（已驗證 M_allow ≈ 564, ratio_δ ≈ 22.67%）
-run('SAMPLE 1: 簡支+集中 (Excel default)', {
-  sectionLabel: 'H-100x50x5x7', P: 10, loadFactor: 1.25,
+// ── 1. ASD vs LRFD 容量比對 (同一梁、無載重組合差異)
+console.log('\n══════════════ Capacity comparison ASD vs LRFD ══════════════');
+console.log('Section H-200x100x5.5x8, SN400B (Fy=235 MPa)');
+const s = ALLOW_SECTIONS.find(x => x.label === 'H-200x100x5.5x8')!;
+console.log('Sx =', s.Sx, '| Zx =', getPlasticZx(s).toFixed(0), '| ratio Zx/Sx =', (getPlasticZx(s)/s.Sx!).toFixed(3));
+console.log('Sy =', getElasticSy(s).toFixed(0));
+
+// ── 2. ASD 簡支 + 集中 + 均佈（沿用舊測試的等價）
+run('SAMPLE 1: ASD 一般梁 D+L', {
+  method: 'ASD', sectionLabel: 'H-200x100x5.5x8',
+  span: 4000, L_uniform: 200, L_impact: 1.0,
 });
 
-// 2. 簡支 + 均佈
-run('SAMPLE 2: 簡支+均佈', {
-  sectionLabel: 'H-200x100x5.5x8', loadType: '均佈荷重' as LoadType,
-  span: 4000, wL: 200, loadFactor: 1.0,
+// ── 3. LRFD 同樣案例 (預期容量大 ≈ 0.9 × 1.12 × Fy/(0.66 Fy) = 1.53 倍)
+run('SAMPLE 2: LRFD 一般梁 D+L (相同輸入)', {
+  method: 'LRFD', sectionLabel: 'H-200x100x5.5x8',
+  span: 4000, L_uniform: 200, L_impact: 1.0,
 });
 
-// 3. 懸臂 + 集中
-run('SAMPLE 3: 懸臂+集中', {
-  sectionLabel: 'H-200x100x5.5x8', support: '懸臂梁' as SupportType,
-  span: 2000, P: 300, loadFactor: 1.0,
-});
-
-// 4. 懸臂 + 均佈
-run('SAMPLE 4: 懸臂+均佈', {
-  sectionLabel: 'H-300x150x6.5x9', support: '懸臂梁' as SupportType,
-  loadType: '均佈荷重' as LoadType, span: 2500, wL: 100, loadFactor: 1.0,
-});
-
-// 5. 天車梁 — Excel 範例三
-run('SAMPLE 5: 天車梁(Monorail) Excel R81-91', {
-  sectionLabel: 'I-300x150x10x18.5', P: 2000, loadFactor: 1.25,
+// ── 4. 天車梁 LRFD 含衝擊
+run('SAMPLE 3: LRFD 天車梁 集中 2000 kg × 1.25', {
+  method: 'LRFD', usage: '天車梁(Monorail)' as never,
+  sectionLabel: 'I-300x150x10x18.5',
+  span: 6000, L_point: 2000, L_impact: 1.25,
   deflection: def800 as never,
 });
 
-// 6. NG 案例 — 故意超載
-run('SAMPLE 6: NG 故意超載', {
-  sectionLabel: 'H-100x50x5x7', P: 5000, loadFactor: 1.0,
+// ── 5. LRFD + 雙軸彎矩 (My)
+run('SAMPLE 4: LRFD 雙軸 My=300 kg·m', {
+  method: 'LRFD', sectionLabel: 'H-200x200x8x12',
+  span: 5000, L_uniform: 300, My_input: 300,
+});
+
+// ── 6. ASD + 風力組合
+run('SAMPLE 5: ASD 含風 W (上吸 -150 kg/m)', {
+  method: 'ASD', sectionLabel: 'H-300x150x6.5x9',
+  span: 4000, L_uniform: 150, W_uniform: -150,
+});
+
+// ── 7. LRFD 含地震反力
+run('SAMPLE 6: LRFD 設備梁含地震反力 E=800 kg', {
+  method: 'LRFD', sectionLabel: 'H-300x150x6.5x9',
+  span: 5000, L_point: 1500, E_point: 800,
+  deflection: ALLOW_DEFLECTIONS.find(d => d.label === '設備支承梁｜其他設備 L/400 且 ≤ 21 mm') as never,
+});
+
+// ── 8. 故意 NG: LRFD 超載
+run('SAMPLE 7: LRFD NG 超載', {
+  method: 'LRFD', sectionLabel: 'H-100x50x5x7',
+  span: 6000, L_point: 5000, L_impact: 1.0,
 });

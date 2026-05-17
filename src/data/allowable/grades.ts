@@ -48,11 +48,20 @@ export const ALLOW_GRADES: AllowGrade[] = [
   }
 ];
 
-// 設計常數 (DB_Settings 右半部)
+// ── 通用常數 ──
 export const N_PER_KG = 9.80665;   // 1 kgf = 9.80665 N
+export const STEEL_DENSITY = 0.00785; // (kg/m) per (mm²): A(mm²) × 0.00785 = kg/m
+
+// ── ASD 容許應力設計法 ──
 export const FB_FACTOR = 0.66;     // 容許彎曲應力係數: Fb = 0.66 × Fy
 export const FV_FACTOR = 0.40;     // 容許剪應力係數: Fv = 0.40 × Fy
-export const STEEL_DENSITY = 0.00785; // (kg/m) per (mm²): A(mm²) × 0.00785 = kg/m
+
+// ── LRFD 極限設計法（依《鋼結構極限設計法規範》與 AISC 360） ──
+// φMn = φ_b × Fy × Zx     （結實斷面塑性彎矩）
+// φVn = φ_v × 0.6 × Fy × Aw
+export const PHI_BENDING = 0.9;    // 彎曲強度折減 φ_b
+export const PHI_SHEAR = 0.9;      // 剪力強度折減 φ_v（台灣規範採 0.9；AISC 對結實腹板採 1.0）
+export const FV_LRFD_FACTOR = 0.6; // φVn 公式中的 0.6 係數
 
 export function getAllowGrade(label: string): AllowGrade | undefined {
   return ALLOW_GRADES.find((g) => g.label === label);

@@ -9,7 +9,7 @@ import { getAllowGrade } from '../data/allowable/grades';
 import { getAllowDeflection } from '../data/allowable/deflection';
 import { getAllowGrating } from '../data/allowable/grating';
 import { getAllowDeck, getAllowWWM } from '../data/allowable/deck';
-import { calcBeam, BeamUsage, SupportType, LoadType } from '../calc/allowable/beam';
+import { calcBeam, BeamUsage, SupportType, DesignMethod } from '../calc/allowable/beam';
 import { calcColumn } from '../calc/allowable/column';
 import { calcGrating, GratingSupport } from '../calc/allowable/grating';
 import { calcDeck, DeckSupport } from '../calc/allowable/deck';
@@ -49,25 +49,30 @@ function buildBeamRow(): SummaryRow {
   if (!section || !grade || !deflection) return emptyRow(1, '鋼梁', 'beam');
 
   const r = calcBeam({
+    method: (s.method as DesignMethod) ?? 'ASD',
     usage: (s.usage as BeamUsage) ?? '一般鋼梁',
     support: (s.support as SupportType) ?? '簡支梁',
-    loadType: (s.loadType as LoadType) ?? '集中荷重',
     section, grade, deflection,
     span: s.span ?? 0,
     includeSelfWeight: s.includeSelfWeight ?? true,
-    wD_add: s.wD_add ?? 0,
-    P: s.P ?? 0, wL: s.wL ?? 0,
-    loadFactor: s.loadFactor ?? 1.0,
+    D_add: s.D_add ?? 0,
+    L_uniform: s.L_uniform ?? 0,
+    L_point: s.L_point ?? 0,
+    L_impact: s.L_impact ?? 1.0,
+    W_uniform: s.W_uniform ?? 0,
+    W_point: s.W_point ?? 0,
+    E_point: s.E_point ?? 0,
+    My_input: s.My_input ?? 0,
   });
-  const IR_max = Math.max(r.ratio_M, r.ratio_V, r.ratio_delta);
+  const IR_max = Math.max(r.IR_biaxial, r.IR_V, r.IR_delta);
   const verdict = r.overall || '—';
-  const maxAllow = s.loadType === '集中荷重'
-    ? `Pr ${Math.round(r.Pr_rated).toLocaleString()} kg`
-    : `qs ${r.qs_service.toFixed(1)} kg/m`;
+  const maxAllow = r.controlCombo
+    ? `${r.controlCombo.label} · M=${Math.round(r.M_act).toLocaleString()} kg·m`
+    : '—';
   return {
     no: 1, module: '鋼梁/天車梁',
-    section: section.label,
-    IR_M: r.ratio_M, IR_V: r.ratio_V, IR_delta: r.ratio_delta, IR_max,
+    section: `${section.label} (${s.method ?? 'ASD'})`,
+    IR_M: r.IR_biaxial, IR_V: r.IR_V, IR_delta: r.IR_delta, IR_max,
     verdict, controlBy: r.controlBy,
     maxAllow,
     whitelang: verdict === 'OK'
